@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
+  FlatList,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +13,12 @@ import {
 export default function HomeScreen() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [studentName, setStudentName] = useState('');
+const [regNumber, setRegNumber] = useState('');
+const [course, setCourse] = useState('');
+const [students, setStudents] = useState<any[]>([]);
+  const [books, setBooks]=useState
+  <any[]>([]);
 
   const login = () => {
     if (username === 'student' && password === '1234') {
@@ -20,7 +27,36 @@ export default function HomeScreen() {
       Alert.alert('Error', 'Invalid Username or Password');
     }
   };
+  const registerStudent = () => {
+  if (!studentName || !regNumber || !course) {
+    Alert.alert('Error', 'Fill all fields');
+    return;
+  }
 
+  const newStudent = {
+    id: Date.now().toString(),
+    studentName,
+    regNumber,
+    course,
+  };
+
+  setStudents([...students, newStudent]);
+
+  setStudentName('');
+  setRegNumber('');
+  setCourse('');
+
+  Alert.alert('Success', 'Student Registered');
+};
+useEffect(() => {
+  fetch('https://openlibrary.org/search.json?q=novel')
+    .then((response) => response.json())
+    .then((data) => 
+  setBooks(data.docs.slice(0, 10)))
+    .catch(() =>
+      Alert.alert('Error', 'Failed to load books')
+    );
+}, []);
   return (
     <ScrollView style={styles.container}>
       <Text style={styles.title}>📚 BookHub</Text>
@@ -72,6 +108,76 @@ export default function HomeScreen() {
           <Text>📚 Past Papers</Text>
         </View>
       </View>
+      <Text style={styles.section}>Student Registration</Text>
+
+<View style={styles.bookCard}>
+  <TextInput
+    style={styles.input}
+    placeholder="Student Name"
+    value={studentName}
+    onChangeText={setStudentName}
+  />
+
+  <TextInput
+    style={styles.input}
+    placeholder="Registration Number"
+    value={regNumber}
+    onChangeText={setRegNumber}
+  />
+
+  <TextInput
+    style={styles.input}
+    placeholder="Course"
+    value={course}
+    onChangeText={setCourse}
+  />
+
+  <TouchableOpacity
+    style={styles.button}
+    onPress={registerStudent}
+  >
+    <Text style={styles.buttonText}>
+      Register Student
+    </Text>
+  </TouchableOpacity>
+</View>
+<Text style={styles.section}>
+  Registered Students
+</Text>
+
+{students.map((student) => (
+  <View
+    key={student.id}
+    style={styles.bookCard}
+  >
+    <Text>
+      Name: {student.studentName}
+    </Text>
+
+    <Text>
+      Reg No: {student.regNumber}
+    </Text>
+
+    <Text>
+      Course: {student.course}
+    </Text>
+  </View>
+))}
+<Text style={styles.section}>Error Handling Demo</Text>
+
+<TouchableOpacity
+  style={styles.button}
+  onPress={() =>
+    Alert.alert(
+      'Network Error',
+      'Unable to connect to the server.'
+    )
+  }
+>
+  <Text style={styles.buttonText}>
+    Test Error Handling
+  </Text>
+</TouchableOpacity>
 
       <Text style={styles.section}>Recently Added</Text>
 
@@ -95,6 +201,24 @@ export default function HomeScreen() {
         </Text>
         <Text>Henrik Ibsen</Text>
       </View>
+      <Text style={styles.section}>
+  Books From API
+</Text>
+
+<FlatList
+  scrollEnabled={false}
+  data={books}
+  keyExtractor={(item: any, index) =>
+    index.toString()
+  }
+  renderItem={({ item }: any) => (
+    <View style={styles.bookCard}>
+      <Text style={styles.bookTitle}>
+        {item.title}
+      </Text>
+    </View>
+  )}
+/> 
     </ScrollView>
   );
 }
