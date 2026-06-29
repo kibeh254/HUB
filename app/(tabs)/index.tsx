@@ -1,3 +1,4 @@
+import * as SQLite from 'expo-sqlite';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
@@ -9,8 +10,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-
 export default function HomeScreen() {
+  const db = SQLite.openDatabaseSync('bookhub.db');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [studentName, setStudentName] = useState('');
@@ -18,14 +19,19 @@ export default function HomeScreen() {
   const [course, setCourse] = useState('');
   const [students, setStudents] = useState<any[]>([]);
   const [books, setBooks] = useState<any[]>([]);
+  const [eventLogs, setEventLogs] = useState<string[]>([]);
 
   const login = () => {
-    if (username === 'student' && password === '1234') {
-      Alert.alert('Success', 'Login Successful');
-    } else {
-      Alert.alert('Error', 'Invalid Username or Password');
-    }
-  };
+  logEvent('Login button pressed');
+
+  if (username === 'student' && password === '1234') {
+    logEvent('Login Successful');
+    Alert.alert('Success', 'Login Successful');
+  } else {
+    logEvent('Login Failed');
+    Alert.alert('Error', 'Invalid Username or Password');
+  }
+};
 
   const registerStudent = () => {
     if (!studentName || !regNumber || !course) {
@@ -41,15 +47,39 @@ export default function HomeScreen() {
     };
 
     setStudents([...students, newStudent]);
-
+db.runSync(
+  `INSERT INTO students (studentName, regNumber, course)
+   VALUES (?, ?, ?)`,
+  [studentName, regNumber, course]
+);
     setStudentName('');
     setRegNumber('');
     setCourse('');
+    logEvent('Student Registered');
 
     Alert.alert('Success', 'Student Registered');
   };
+  const logEvent = (message: string) => {
+  setEventLogs((prev) => [
+    `${new Date().toLocaleTimeString()} - ${message}`,
+    ...prev,
+  ]);
+};
+ useEffect(() => {
+  db.execSync(`
+  CREATE TABLE IF NOT EXISTS students (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    studentName TEXT,
+    regNumber TEXT,
+    course TEXT
+  );
+`);
+const savedStudents = db.getAllSync(
+  'SELECT * FROM students'
+);
 
-  useEffect(() => {
+setStudents(savedStudents);
+
     fetch('https://openlibrary.org/search.json?q=novel')
       .then((response) => response.json())
       .then((data) => setBooks(data.docs.slice(0, 10)))
@@ -67,20 +97,25 @@ export default function HomeScreen() {
       </Text>
 
       <TextInput
-        style={styles.input}
-        placeholder="Username"
-        value={username}
-        onChangeText={setUsername}
-      />
+  style={styles.input}
+  placeholder="Username"
+  value={username}
+  onChangeText={setUsername}
+  onKeyPress={({ nativeEvent }) =>
+    logEvent(`Username Key: ${nativeEvent.key}`)
+  }
+/>
 
       <TextInput
-        style={styles.input}
-        placeholder="Password"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
+  style={styles.input}
+  placeholder="Password"
+  secureTextEntry
+  value={password}
+  onChangeText={setPassword}
+  onKeyPress={({ nativeEvent }) =>
+    logEvent(`Password Key: ${nativeEvent.key}`)
+  }
+/>
       <TouchableOpacity
         style={styles.button}
         onPress={login}
@@ -135,13 +170,23 @@ export default function HomeScreen() {
         />
 
         <TouchableOpacity
-          style={styles.button}
-          onPress={registerStudent}
-        >
-          <Text style={styles.buttonText}>
-            Register Student
-          </Text>
-        </TouchableOpacity>
+  style={styles.button}
+  onPress={() => {
+    logEvent('Register button tapped');
+    registerStudent();
+  }}
+  onLongPress={() => {
+    logEvent('Register button long pressed');
+    Alert.alert(
+      'Long Press',
+      'You held the Register Student button.'
+    );
+  }}
+>
+  <Text style={styles.buttonText}>
+    Register Student
+  </Text>
+</TouchableOpacity>
       </View>
 
       <Text style={styles.section}>
@@ -226,6 +271,22 @@ export default function HomeScreen() {
           </View>
         )}
       />
+      <Text style={styles.section}>
+  Event Log
+</Text>
+
+{eventLogs.length === 0 ? (
+  <Text>No events recorded yet.</Text>
+) : (
+  eventLogs.map((log, index) => (
+    <View
+      key={index}
+      style={styles.bookCard}
+    >
+      <Text>{log}</Text>
+    </View>
+  ))
+)}
     </ScrollView>
   );
 }
